@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Carteleria LFDO - Toston Seguro Offline</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Arial', sans-serif; }
+        video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        
+        #precio {
+            position: absolute;
+            z-index: 10;
+            top: 85%; 
+            left: 4.5%; 
+            color: #FFFFFF; 
+            font-size: 80px; 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <video autoplay loop muted playsinline>
+        <source src="fondo_toston.mp4" type="video/mp4">
+    </video>
+    
+    <div id="precio"></div>
+
+    <script>
+        const SUCURSAL_ACTUAL = "Centro"; 
+        const ID_PIEZA_ACTUAL = "promo_toston";
+        
+        // Creamos un nombre de archivo interno único para guardar este precio específico
+        const MEMORIA_INTERNA = "precio_guardado_" + SUCURSAL_ACTUAL + "_" + ID_PIEZA_ACTUAL;
+        
+        const urlSegura = "https://script.google.com/macros/s/AKfycbzg8Ph9-zdVZNDeKdSFKU6-i5_LLSuVTAhncOT8OPogbtiN5FIPWQrdPGGIM_7_NZBQuw/exec" + "?token=LFDO_Seguridad_2026"; 
+
+        async function obtenerPrecio() {
+            // 1. CARGA INMEDIATA: Revisar si tenemos un precio guardado de ayer o de hace un rato
+            const precioUltimoRegistro = localStorage.getItem(MEMORIA_INTERNA);
+            if (precioUltimoRegistro) {
+                document.getElementById('precio').innerText = precioUltimoRegistro;
+            }
+
+            // 2. INTENTO DE ACTUALIZACIÓN: Buscar si hay cambios en internet
+            try {
+                const respuesta = await fetch(urlSegura);
+                const datos = await respuesta.json(); 
+                
+                const producto = datos.find(item => item.Sucursal === SUCURSAL_ACTUAL && item.ID_Pieza === ID_PIEZA_ACTUAL);
+                
+                if (producto) {
+                    const precioFormateado = "$" + Number(producto.Precio).toLocaleString('es-AR');
+                    
+                    // Si el precio de internet es distinto al que teníamos guardado, actualizamos la pantalla
+                    if (document.getElementById('precio').innerText !== precioFormateado) {
+                        document.getElementById('precio').innerText = precioFormateado;
+                    }
+                    
+                    // Guardamos el precio actualizado en la memoria interna como respaldo
+                    localStorage.setItem(MEMORIA_INTERNA, precioFormateado);
+                }
+            } catch (error) {
+                // 3. PLAN DE CONTINGENCIA
+                console.warn("Sin internet. Se mantiene el último precio guardado.");
+                
+                // Solo muestra "Error" si es la primera vez que se prende la pantalla en su historia y no tiene internet para descargar el precio inicial
+                if (!precioUltimoRegistro) {
+                    document.getElementById('precio').innerText = "---";
+                }
+            }
+        }
+
+        obtenerPrecio();
+        setInterval(obtenerPrecio, 600000);
+    </script>
+</body>
+</html>
